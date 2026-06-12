@@ -1,0 +1,115 @@
+# openext
+
+Centralized OpenCode extension manager. One hub, many consumer projects, symlinks everywhere.
+
+## Setup
+
+Clone this repo somewhere stable on your machine (e.g. `~/openext`):
+
+```sh
+git clone git@github.com:sebastianloh97/openext.git ~/openext
+```
+
+Set up the alias for convenience:
+
+```sh
+alias openext='bun ~/openext/cli.ts'
+```
+
+## Quick Start
+
+Bootstrap a new consumer project:
+
+```sh
+# From inside your project directory
+openext add agents/levi .
+openext add skills/chrome .
+openext add plugins/stuck-watcher .
+openext add config/stuck-watcher.jsonc .
+openext status .        # verify everything is clean
+```
+
+Or write the manifest manually and run `init`:
+
+```sh
+# Create .opencode/openext.json
+cat > .opencode/openext.json << 'EOF'
+{
+  "agents": ["levi", "shalltear"],
+  "skills": ["chrome", "memorize"],
+  "plugins": ["stuck-watcher"],
+  "config": ["stuck-watcher.jsonc"]
+}
+EOF
+
+# Materialize all symlinks at once
+openext init .
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `openext init [path]` | Reconcile symlinks with manifest. Idempotent, safe to run anytime. |
+| `openext add <type>/<name> [path]` | Add extension to manifest and create symlink. |
+| `openext remove <type>/<name> [path]` | Remove extension from manifest and delete symlink. |
+| `openext clean [path]` | Remove broken symlinks pointing to deleted hub entries. |
+| `openext create <type> <name>` | Create a skeleton extension in the hub. |
+| `openext list [--type <type>]` | List all available extensions in the hub. |
+| `openext status [path]` | Compare manifest against actual state, report discrepancies. |
+
+All mutating commands support `--dry-run`. The `init` command also supports `--force` to overwrite real files with symlinks.
+
+If `path` is omitted, it defaults to the current working directory.
+
+## Extension Types
+
+| Type | Manifest name | Hub location | Symlink destination |
+|------|--------------|--------------|-------------------|
+| `agents` | bare name (`levi`) | `agents/levi.md` | `.opencode/agents/levi.md` |
+| `commands` | bare name (`opsx-propose`) | `commands/opsx-propose.md` | `.opencode/commands/opsx-propose.md` |
+| `plugins` | bare name (`stuck-watcher`) | `plugins/stuck-watcher.ts` | `.opencode/plugins/stuck-watcher.ts` |
+| `scripts` | bare name (`session-info`) | `scripts/session-info.ts` | `.opencode/scripts/session-info.ts` |
+| `skills` | directory name (`chrome`) | `skills/chrome/` | `.opencode/skills/chrome` (directory-level) |
+| `config` | full filename (`stuck-watcher.jsonc`) | `config/stuck-watcher.jsonc` | `.opencode/stuck-watcher.jsonc` (at root) |
+
+## Manifest Format
+
+File: `.opencode/openext.json`
+
+```json
+{
+  "agents": ["levi", "shalltear"],
+  "skills": ["chrome", "memorize"],
+  "commands": ["opsx-propose"],
+  "plugins": ["stuck-watcher", "session-title"],
+  "scripts": ["session-info"],
+  "config": ["stuck-watcher.jsonc", "runtime-session-info.md"]
+}
+```
+
+Omit any type you don't need. An empty `{}` is valid.
+
+## Creating New Extensions
+
+```sh
+# Create a skeleton in the hub
+openext create agents my-new-agent
+openext create skills my-new-skill
+openext create config my-config.jsonc
+
+# Then add it to your project
+openext add agents/my-new-agent ~/my-project
+```
+
+## How It Works
+
+1. The hub (`~/openext`) holds all extensions as real files.
+2. Each consumer project has a `.opencode/openext.json` manifest declaring what it needs.
+3. `openext init` creates absolute symlinks from `.opencode/` back to the hub.
+4. `init` also removes any hub-managed symlinks not in the manifest and adds `.opencode/` to `.gitignore`.
+5. Projects can mix hub-managed symlinks with local-only files -- only hub-managed symlinks are touched.
+
+## Requirements
+
+- [Bun](https://bun.sh/) runtime
