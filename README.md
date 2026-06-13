@@ -131,7 +131,7 @@ openext add agents/my-new-agent ~/my-project
 
 ### Overriding a Hub Extension Locally
 
-To customize a config file for a specific project without affecting the hub:
+To customize a file for a specific project without affecting the hub:
 
 1. Remove the symlink.
 2. Create a real file at the same path and copy the content over.
