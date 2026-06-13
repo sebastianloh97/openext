@@ -18,6 +18,17 @@ The install script will:
 
 No shell alias needed — `openext` is available as a PATH executable immediately.
 
+### Custom Hub Location
+
+By default, the hub is cloned to `~/openext`. To use a different directory, set `OPENEXT_HUB` before running the install script:
+
+```sh
+git clone git@github.com:sebastianloh97/openext.git ~/Projects/openext
+OPENEXT_HUB=~/Projects/openext bash ~/Projects/openext/install.sh
+```
+
+The install script is idempotent — re-running it simply pulls latest and overwrites the wrapper script. No duplicates.
+
 To uninstall:
 
 ```sh
