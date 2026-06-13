@@ -4,16 +4,24 @@ Centralized OpenCode extension manager. One hub, many consumer projects, symlink
 
 ## Setup
 
-Clone this repo somewhere stable on your machine (e.g. `~/openext`):
+Clone and run the install script:
 
 ```sh
 git clone git@github.com:sebastianloh97/openext.git ~/openext
+bash ~/openext/install.sh
 ```
 
-Set up the alias for convenience:
+The install script will:
+1. Clone the hub repo (or pull latest if already cloned)
+2. Create a wrapper script at `~/.local/bin/openext`
+3. Verify `bun` and `git` are available
+
+No shell alias needed — `openext` is available as a PATH executable immediately.
+
+To uninstall:
 
 ```sh
-alias openext='bun ~/openext/cli.ts'
+bash ~/openext/uninstall.sh
 ```
 
 ## Quick Start
