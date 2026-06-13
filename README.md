@@ -129,6 +129,16 @@ openext add agents/my-new-agent ~/my-project
 4. `init` also removes any hub-managed symlinks not in the manifest and adds `.opencode/` to `.gitignore`.
 5. Projects can mix hub-managed symlinks with local-only files -- only hub-managed symlinks are touched.
 
+### Overriding a Hub Extension Locally
+
+To customize a config file for a specific project without affecting the hub:
+
+1. Remove the symlink.
+2. Create a real file at the same path and copy the content over.
+3. Edit as needed.
+
+`openext init` will skip real files with a warning. It will not overwrite them unless you pass `--force`.
+
 ## Requirements
 
 - [Bun](https://bun.sh/) runtime
