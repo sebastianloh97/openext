@@ -1,13 +1,13 @@
 ---
 name: chatgpt-research
-description: Perform web research via ChatGPT using Chrome and computer-control MCP. Use when user wants to research a topic through ChatGPT, ask ChatGPT a question, or gather information from ChatGPT's web interface.
+description: Perform web research through ChatGPT using the local camofox-browser workflow and optional noVNC login. Use when the user wants research, verification, or question-answering through ChatGPT's website.
 ---
 
 # ChatGPT Research
 
 ## When To Use
 
-Use this skill when the user wants to research a topic using ChatGPT's web interface. This skill combines the `chrome` skill (to launch a browser) with the `computer-control` MCP (to interact with the page like a human).
+Use this skill when the user wants to research a topic using ChatGPT's web interface.
 
 Typical requests:
 
@@ -18,69 +18,69 @@ Typical requests:
 
 ## Prerequisites
 
-- **chrome skill** — must be loaded first to start the browser.
-- **computer-control MCP** — required for all page interaction (mouse, keyboard, screenshots with OCR).
-- If either is missing, report the limitation to the user immediately and do not proceed.
+- Load `camofox-browser` first.
+- If a human login step is needed, use the noVNC path from `camofox-browser`.
 
 ## Workflow
 
-### Step 1: Start Chrome and Navigate
-
-1. Load the `chrome` skill and start a Chrome instance.
-2. Navigate to `https://chatgpt.com/` by clicking the address bar and typing the URL.
+### Step 1: Start Camofox And Navigate
+1. Load `camofox-browser`.
+2. Reuse a healthy local Camofox server when possible; otherwise start it locally.
+3. Create or reuse a ChatGPT tab at `https://chatgpt.com/` using a stable durable `userId` such as `general`.
 
 ### Step 2: Verify Login Status
-
-1. Take an OCR screenshot (`take_screenshot_with_ocr`).
+1. Read the page with a Camofox snapshot.
 2. Look for login indicators:
-   - **Logged in:** User profile name visible, "New chat" sidebar present.
-   - **Not logged in:** "Log in" or "Sign up for free" buttons visible.
-3. If not logged in, inform the user and wait for them to log in before continuing.
+   - Logged in: profile menu present, chat history visible, no primary `Log in` prompt blocking use.
+   - Not logged in: `Log in`, `Sign up`, or auth page visible.
+3. If not logged in:
+   - start or restart VNC through the `camofox-browser` workflow, preferring `lohzi-apps start vnc` for public access,
+   - first try the normal ChatGPT login path,
+   - if clicking `Log in` from `chatgpt.com` does not produce a usable auth flow in snapshots, navigate directly to `https://auth.openai.com/log-in`,
+   - direct Master to the noVNC URL from `camofox-browser`, using `https://vnc.lohzi.com/vnc.html?autoconnect=1&host=vnc.lohzi.com&port=443&encrypt=1&path=websockify` when Master is outside the Linux Mint machine,
+   - wait for Master to complete login,
+   - then re-check the snapshot.
+4. If the login flow destroys or replaces the tab/session, recreate it with the same durable `userId` and then verify login state again.
+5. Even after Master successfully logs in during the current run, do not assume future recreated sessions will still be authenticated. Reopen or recreate and verify explicitly whenever continuity matters.
 
 ### Step 3: Submit the Research Query
-
-1. Click on the "Ask anything" input field (roughly center-bottom of the page).
-2. Type the research question using `type_text`.
-3. Press `Enter` to submit.
-4. Wait 10-15 seconds for ChatGPT to generate a response.
+1. Verify the chat input ref is visible in the snapshot.
+2. Type the research query through the Camofox `type` endpoint.
+3. Submit with `pressEnter=true`.
+4. Wait for ChatGPT to generate a response and verify the conversation URL/state.
+5. Prefer waiting until the response visibly stabilizes and the input area appears idle again rather than assuming the first visible answer is complete.
+6. Do not start extracting findings until generation is complete; otherwise you may capture a partial answer.
 
 ### Step 4: Read the Full Response
+This is the critical step. Read every part of the response.
 
-**This is the most critical step. You MUST read every part of the response.**
-
-1. Press `Home` key to scroll to the top of the page.
-2. Verify that the original question is visible at the top of the response.
-3. Use `PageDown` to scroll through the response one section at a time.
-4. After each `PageDown`, take an OCR screenshot to capture the visible content.
-5. Continue scrolling until you reach the bottom of the page (no new content appears).
-6. Do NOT skip sections. Do NOT summarize prematurely. Read every part.
+1. Fetch a snapshot and read the response from the `main` content area.
+2. If the snapshot is truncated, continue with `offset=nextOffset` until complete.
+3. If the response extends beyond the current viewport, scroll with the Camofox `scroll` endpoint and fetch a fresh snapshot.
+4. Continue until you reach the bottom and further scrolling produces no new content.
+5. Do not skip sections and do not summarize prematurely.
 
 ### Step 5: Document the Findings
-
 1. Write the research findings to `notes/research/<topic-slug>.md`.
 2. Use a clear structure with headings, tables, and bullet points as appropriate.
-3. Include all key information gathered — do not omit details.
+3. Include all key information gathered.
+4. If extraction became partial because the browser state failed mid-run, report that plainly, include whatever was successfully captured, and record the conversation URL if available.
 
 ### Step 6: Close Up
-
-1. Close the ChatGPT tab: `press_keys` with `[["ctrl", "w"]]`.
-2. Close the Chrome window: `press_keys` with `[["ctrl", "shift", "w"]]`.
-3. Kill the Chrome PTY session via `pty_kill`.
+1. Close the ChatGPT session/tab when done.
+2. Unless Master explicitly asks to keep the browser warm, stop the managed VNC app with `lohzi-apps stop vnc` when it was used, or kill the Camofox PTY session for manual runs.
+3. Verify cleanup of leftover `Xvfb`, `x11vnc`, and `websockify` processes and confirm ports `9377`, `6080`, and `5900` are closed when the browser is meant to be stopped.
 
 ## Rules
 
-- **Always verify login before interacting.** Never assume the user is logged in.
-- **Always use OCR to read page content.** Do not guess or assume what is on screen.
-- **Read the FULL response.** Scroll through every section using `PageDown`. Never skip content.
-- **Document findings in a file.** Never return research results only in chat — always write them to `notes/research/`.
-- **Use computer-control MCP exclusively** for all page interaction (not chrome-devtools MCP). This ensures human-like browsing behavior.
-- **If OCR is unavailable or failing**, inform the user and pause the task.
+- Always verify login before interacting.
+- Always use the `camofox-browser` workflow.
+- Read the full response from top to bottom.
+- Document findings in `notes/research/` every time.
+- If noVNC is needed and fails, follow the `camofox-browser` troubleshooting guidance and pause if recovery is unclear.
+- If browser instability interrupts extraction, report partial capture clearly instead of pretending the full answer was read.
 
-## Keyboard Shortcuts Reference
+## Session Convention
 
-| Action | Shortcut |
-| :--- | :--- |
-| Scroll to top | `Home` |
-| Scroll one section | `PageDown` |
-| Close tab | `Ctrl + W` |
-| Close window | `Ctrl + Shift + W` |
+- Recommended ChatGPT session keys: `chatgpt-research`, `chatgpt-login`, or another stable task label
+- Recommended durable ChatGPT profile: reuse the same `userId`, e.g. `general`, across login, retries, and future research runs when shared browser history/login continuity is desired.
