@@ -10,6 +10,8 @@ import {
   readFileSync,
   writeFileSync,
   readlinkSync,
+  cpSync,
+  rmSync,
 } from "node:fs";
 import { join, resolve, basename, dirname, extname, relative } from "node:path";
 
@@ -61,8 +63,27 @@ function manifestPath(project: string): string {
   return join(opencodeDir(project), MANIFEST_NAME);
 }
 
+type Mode = "symlink" | "copy";
+
 interface Manifest {
   [type: string]: string[];
+}
+
+/**
+ * Read the materialization mode from a manifest.
+ * `mode` lives as a top-level key at runtime but is kept out of the index
+ * signature so that extension-type keys stay typed as string[].
+ * Absent or unrecognized `mode` defaults to "symlink" (backward compatible).
+ */
+function getManifestMode(manifest: Manifest): Mode {
+  return (manifest as { mode?: unknown }).mode === "copy" ? "copy" : "symlink";
+}
+
+/**
+ * Persist the materialization mode onto a manifest.
+ */
+function setManifestMode(manifest: Manifest, mode: Mode) {
+  (manifest as { mode?: Mode }).mode = mode;
 }
 
 function readManifest(project: string): Manifest | null {
@@ -231,24 +252,94 @@ function createSymlink(
 }
 
 /**
- * Ensure .opencode/ is in .gitignore
+ * Copy a hub entry (file or directory) to linkPath as a real file/dir.
+ * Leftover symlinks are converted to copies; existing real files are
+ * preserved unless --force.
  */
-function ensureGitignore(project: string, dryRun: boolean) {
+function copyExtension(
+  hubPath: string,
+  linkPath: string,
+  dryRun: boolean,
+  force: boolean
+): "created" | "skipped-real" {
+  let ls;
+  try {
+    ls = lstatSync(linkPath);
+  } catch {
+    ls = null;
+  }
+
+  if (ls) {
+    if (ls.isSymbolicLink()) {
+      // Convert a leftover symlink into a real copy (the goal state in copy mode)
+      if (!dryRun) unlinkSync(linkPath);
+    } else {
+      // Real file/dir already exists; preserve local edits unless --force
+      if (!force) {
+        return "skipped-real";
+      }
+      if (!dryRun) rmSync(linkPath, { recursive: true, force: true });
+    }
+  }
+
+  if (!dryRun) {
+    ensureParentDir(linkPath);
+    cpSync(hubPath, linkPath, { recursive: true });
+  }
+  return "created";
+}
+
+/**
+ * Materialize an extension as either a symlink (default) or a real copy,
+ * depending on the project's mode.
+ */
+function materializeExtension(
+  hubPath: string,
+  linkPath: string,
+  dryRun: boolean,
+  force: boolean,
+  mode: Mode
+): "created" | "skipped-exists" | "skipped-real" | "skipped-wrong-target" | "error" {
+  if (mode === "symlink") {
+    return createSymlink(hubPath, linkPath, dryRun, force);
+  }
+  return copyExtension(hubPath, linkPath, dryRun, force);
+}
+
+/**
+ * Reconcile .gitignore with the project mode:
+ *  - symlink mode: ignore .opencode/ (symlinks are machine-specific).
+ *  - copy mode: un-ignore .opencode/ so the copies get committed and the
+ *    project is self-contained.
+ */
+function ensureGitignore(project: string, dryRun: boolean, mode: Mode) {
   const gitignorePath = join(project, ".gitignore");
   let content = "";
   if (existsSync(gitignorePath)) {
     content = readFileSync(gitignorePath, "utf-8");
-    // Check if .opencode/ is already listed
-    const lines = content.split("\n");
-    if (lines.some((l) => l.trim() === ".opencode/" || l.trim() === OPENCODE_DIR)) {
-      return; // already present
-    }
   }
-  const addition = (content && !content.endsWith("\n") ? "\n" : "") + ".opencode/\n";
-  if (!dryRun) {
-    writeFileSync(gitignorePath, content + addition, "utf-8");
+  const lines = content.split("\n");
+  const hasIgnore = lines.some(
+    (l) => l.trim() === ".opencode/" || l.trim() === OPENCODE_DIR
+  );
+
+  if (mode === "symlink") {
+    if (hasIgnore) return;
+    const addition =
+      (content && !content.endsWith("\n") ? "\n" : "") + ".opencode/\n";
+    if (!dryRun) writeFileSync(gitignorePath, content + addition, "utf-8");
+    log(`  .gitignore: added .opencode/`);
+  } else {
+    // copy mode: remove the blanket ignore so copies get committed
+    if (!hasIgnore) return;
+    const newLines = lines.filter(
+      (l) => l.trim() !== ".opencode/" && l.trim() !== OPENCODE_DIR
+    );
+    let newContent = newLines.join("\n");
+    if (newContent && !newContent.endsWith("\n")) newContent += "\n";
+    if (!dryRun) writeFileSync(gitignorePath, newContent, "utf-8");
+    log(`  .gitignore: removed .opencode/ (copy mode commits extensions)`);
   }
-  log(`  .gitignore: added .opencode/`);
 }
 
 /**
@@ -291,11 +382,20 @@ function collectHubManagedSymlinks(project: string): string[] {
 
 // ─── Commands ────────────────────────────────────────────────────────
 
-function cmdInit(project: string, dryRun: boolean, force: boolean): number {
+function cmdInit(project: string, dryRun: boolean, force: boolean, copy: boolean): number {
   const manifest = readManifest(project);
   if (manifest === null) {
     log("no manifest found");
     return 0;
+  }
+
+  // Resolve effective mode: --copy flag forces copy mode; otherwise read manifest.
+  const priorMode = getManifestMode(manifest);
+  const mode: Mode = copy ? "copy" : priorMode;
+  if (copy && priorMode !== "copy") {
+    setManifestMode(manifest, "copy");
+    if (!dryRun) writeManifest(project, manifest);
+    log(`  mode: copy (persisted to manifest)`);
   }
 
   let created = 0;
@@ -324,7 +424,7 @@ function cmdInit(project: string, dryRun: boolean, force: boolean): number {
       );
       expectedLinks.add(resolve(linkPath));
 
-      const result = createSymlink(resolved.hubPath, linkPath, dryRun, force);
+      const result = materializeExtension(resolved.hubPath, linkPath, dryRun, force, mode);
       switch (result) {
         case "created":
           log(`  + ${type}/${name}`);
@@ -345,7 +445,9 @@ function cmdInit(project: string, dryRun: boolean, force: boolean): number {
     }
   }
 
-  // Step 3: Remove stale hub-managed symlinks
+  // Step 3: Remove stale hub-managed symlinks.
+  // Copy-mode entries are real files (not symlinks), so they are never
+  // auto-removed here -- use `remove` to delete a local copy explicitly.
   const hubSymlinks = collectHubManagedSymlinks(project);
   for (const linkPath of hubSymlinks) {
     if (!expectedLinks.has(resolve(linkPath))) {
@@ -356,7 +458,7 @@ function cmdInit(project: string, dryRun: boolean, force: boolean): number {
   }
 
   // Step 4: .gitignore
-  ensureGitignore(project, dryRun);
+  ensureGitignore(project, dryRun, mode);
 
   // Step 5: Summary
   const summaryParts: string[] = [];
@@ -372,7 +474,8 @@ function cmdInit(project: string, dryRun: boolean, force: boolean): number {
 function cmdAdd(
   project: string,
   typeInput: string,
-  dryRun: boolean
+  dryRun: boolean,
+  copy: boolean
 ): number {
   const { type, name } = parseTypeName(typeInput);
 
@@ -387,6 +490,11 @@ function cmdAdd(
   const manifest = readManifest(project) ?? {};
   if (!manifest[type]) manifest[type] = [];
 
+  // Resolve effective mode; --copy persists copy mode to the manifest.
+  const priorMode = getManifestMode(manifest);
+  if (copy) setManifestMode(manifest, "copy");
+  const mode = getManifestMode(manifest);
+
   // Step 3: Check if already present
   if (manifest[type].includes(name)) {
     log(`already in manifest: ${type}/${name}`);
@@ -397,21 +505,24 @@ function cmdAdd(
   manifest[type].push(name);
   if (!dryRun) writeManifest(project, manifest);
 
-  // Step 5-6: Create symlink
+  // Step 5-6: Materialize extension
   const linkPath = computeLinkPath(project, type, name, resolved.hubPath);
-  const result = createSymlink(resolved.hubPath, linkPath, dryRun, false);
+  const result = materializeExtension(resolved.hubPath, linkPath, dryRun, false, mode);
 
   if (result === "created") {
     log(`  + ${type}/${name}`);
   } else if (result === "skipped-exists") {
-    log(`  symlink already correct: ${type}/${name}`);
+    log(`  already correct: ${type}/${name}`);
   } else if (result === "skipped-real") {
-    warn(`real file exists at ${relative(project, linkPath)}; symlink not created`);
+    warn(`${relative(project, linkPath)} already exists; not overwritten`);
   } else if (result === "skipped-wrong-target") {
-    warn(`symlink at ${relative(project, linkPath)} points elsewhere; not overwritten`);
+    warn(`${relative(project, linkPath)} points elsewhere; not overwritten`);
   }
 
-  log(`added ${type}/${name} to manifest${dryRun ? " (dry-run)" : ""}`);
+  if (copy && priorMode !== "copy") {
+    warn(`mode changed to copy; run \`openext init .\` to convert existing extensions`);
+  }
+  log(`added ${type}/${name} to manifest${mode === "copy" ? " [copy]" : ""}${dryRun ? " (dry-run)" : ""}`);
   return 0;
 }
 
@@ -433,6 +544,8 @@ function cmdRemove(
     return 1;
   }
 
+  const mode = getManifestMode(manifest);
+
   // Step 2: Remove from manifest array
   manifest[type] = manifest[type].filter((n: string) => n !== name);
   if (manifest[type].length === 0) {
@@ -442,37 +555,35 @@ function cmdRemove(
   // Step 3: Write manifest
   if (!dryRun) writeManifest(project, manifest);
 
-  // Step 4: Remove symlink
-  // Use lstatSync to detect broken symlinks (existsSync returns false for them).
+  // Step 4: Remove the materialized extension (symlink or copy).
   const resolved = resolveHubEntry(type, name);
-  if (resolved) {
-    const linkPath = computeLinkPath(project, type, name, resolved.hubPath);
+  const linkPath = resolved
+    ? computeLinkPath(project, type, name, resolved.hubPath)
+    : computeLinkPathFallback(project, type, name);
+
+  if (linkPath) {
     let linkStat;
     try { linkStat = lstatSync(linkPath); } catch { linkStat = null; }
     if (linkStat) {
-      if (linkStat.isSymbolicLink() && isHubManagedSymlink(linkPath)) {
-        if (!dryRun) unlinkSync(linkPath);
-        log(`  removed symlink: ${relative(project, linkPath)}`);
-      } else if (linkStat.isSymbolicLink()) {
-        warn(`symlink at ${relative(project, linkPath)} is not hub-managed; skipped`);
+      if (linkStat.isSymbolicLink()) {
+        if (isHubManagedSymlink(linkPath)) {
+          if (!dryRun) unlinkSync(linkPath);
+          log(`  removed symlink: ${relative(project, linkPath)}`);
+        } else {
+          warn(`symlink at ${relative(project, linkPath)} is not hub-managed; skipped`);
+        }
+      } else if (mode === "copy") {
+        // Real file/dir: a local copy. Remove it.
+        if (!dryRun) rmSync(linkPath, { recursive: true, force: true });
+        log(`  removed copy: ${relative(project, linkPath)}`);
       } else {
-        warn(`${relative(project, linkPath)} is a real file; skipped`);
+        warn(`${relative(project, linkPath)} is a real file; skipped (symlink mode)`);
       }
     } else {
-      log(`  symlink already absent: ${type}/${name}`);
+      log(`  already absent: ${type}/${name}`);
     }
   } else {
-    // Hub entry no longer exists; still try to find and remove the symlink
-    // by computing the path from the name
-    const linkPath = computeLinkPathFallback(project, type, name);
-    if (linkPath) {
-      let linkStat;
-      try { linkStat = lstatSync(linkPath); } catch { linkStat = null; }
-      if (linkStat && linkStat.isSymbolicLink() && isHubManagedSymlink(linkPath)) {
-        if (!dryRun) unlinkSync(linkPath);
-        log(`  removed symlink: ${relative(project, linkPath)}`);
-      }
-    }
+    log(`  already absent: ${type}/${name}`);
   }
 
   log(`removed ${type}/${name} from manifest${dryRun ? " (dry-run)" : ""}`);
@@ -694,6 +805,8 @@ function cmdStatus(project: string): number {
     return 1;
   }
 
+  const mode = getManifestMode(manifest);
+
   let missing = 0;
   let broken = 0;
   let unexpected = 0;
@@ -723,8 +836,19 @@ function cmdStatus(project: string): number {
       try { linkStat = lstatSync(linkPath); } catch { linkStat = null; }
 
       if (!linkStat) {
-        log(`  MISSING   ${type}/${name}: symlink does not exist`);
+        log(`  MISSING   ${type}/${name}: does not exist`);
         missing++;
+        continue;
+      }
+
+      if (mode === "copy") {
+        // Copy mode expects a real file/dir at the link path.
+        if (linkStat.isSymbolicLink()) {
+          log(`  CONFLICT  ${type}/${name}: symlink found where copy expected`);
+          conflicting++;
+          continue;
+        }
+        ok++;
         continue;
       }
 
@@ -805,9 +929,9 @@ function main() {
     console.log(`usage: openext <command> [options] [project-path]
 
 Commands:
-  init [project-path]         Reconcile symlinks with manifest
-  add <type>/<name> [path]    Add extension to manifest and symlink
-  remove <type>/<name> [path] Remove extension from manifest and symlink
+  init [project-path]         Reconcile extensions with manifest
+  add <type>/<name> [path]    Add extension to manifest and materialize it
+  remove <type>/<name> [path] Remove extension from manifest and delete it
   clean [project-path]        Remove broken hub-managed symlinks
   create <type> <name>        Create skeleton extension in hub
   list [--type <type>]        List available extensions in hub
@@ -816,6 +940,9 @@ Commands:
 Options:
   --dry-run   Preview changes without writing
   --force     Overwrite existing files (init only)
+  --copy      Materialize as real copies instead of symlinks (init/add).
+              Persists "mode": "copy" in the manifest and un-ignores .opencode/
+              so the copies are committed and the project is self-contained.
   --type <t>  Filter by extension type (list only)`);
     process.exit(0);
   }
@@ -826,6 +953,7 @@ Options:
   // Parse flags
   const dryRun = rest.includes("--dry-run");
   const force = rest.includes("--force");
+  const copy = rest.includes("--copy");
 
   // Remove flags from positional args
   const positional = rest.filter((a) => !a.startsWith("--"));
@@ -842,7 +970,7 @@ Options:
   switch (command) {
     case "init": {
       const project = resolveProject(positional[0]);
-      const code = cmdInit(project, dryRun, force);
+      const code = cmdInit(project, dryRun, force, copy);
       process.exit(code);
       break;
     }
@@ -852,7 +980,7 @@ Options:
         process.exit(1);
       }
       const project = resolveProject(positional[1]);
-      const code = cmdAdd(project, positional[0], dryRun);
+      const code = cmdAdd(project, positional[0], dryRun, copy);
       process.exit(code);
       break;
     }
