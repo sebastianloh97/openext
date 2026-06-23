@@ -788,7 +788,9 @@ function cmdList(filterType?: string): number {
     if (entries.length > 0 || !filterType) {
       console.log(`${type}:`);
       if (entries.length > 0) {
-        console.log(`  ${[...new Set(entries)].sort().join(", ")}`);
+        // Quote each name so the output can be pasted straight into a manifest
+        // JSON array (e.g. "opsx-align", "opsx-apply", ...).
+        console.log(`  ${[...new Set(entries)].sort().map((e) => `"${e}"`).join(", ")}`);
       } else {
         console.log(`  (none)`);
       }
