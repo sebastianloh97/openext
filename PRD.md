@@ -126,7 +126,11 @@ Behavior:
    - Remove the symlink.
    - Report the removal.
    - This happens regardless of `--force`. Removal of stale hub-managed symlinks is always safe because the manifest is the source of truth.
-4. Ensure `.opencode/` is listed in the project's `.gitignore`. If `.gitignore` does not exist, create it. If the entry is already present, skip. The symlinks contain machine-local absolute paths and should not be committed.
+4. Reconcile ignore rules for `.opencode/`:
+   - Remove any legacy root `.gitignore` entry for `.opencode/`.
+   - Create or update `.opencode/.gitignore` with an OpenExt-managed block.
+   - In symlink mode, ignore only hub-linked artifacts implied by the current manifest (plus runtime files such as `node_modules`, `package.json`, `package-lock.json`, and `bun.lock`).
+   - In copy mode, ignore only runtime files so copied extensions remain committable.
 5. Report a summary: created, skipped, removed, errors.
 6. Exit code 0 if no errors occurred. Exit code 1 if any errors were reported (e.g., hub entry not found, real file blocking a symlink without `--force`). Skipped items are warnings, not errors -- they do not affect the exit code.
 

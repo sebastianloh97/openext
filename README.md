@@ -114,8 +114,8 @@ File: `.opencode/openext.json`
 Omit any type you don't need. An empty `{}` is valid.
 
 `mode` is optional and controls how extensions are materialized:
-- omitted or `"symlink"` (default): create symlinks back to the hub, and add `.opencode/` to `.gitignore`.
-- `"copy"`: copy real files/directories from the hub, and **do not** ignore `.opencode/` so the copies are committed and the project is self-contained.
+- omitted or `"symlink"` (default): create symlinks back to the hub, and manage `.opencode/.gitignore` so only hub-linked artifacts are ignored.
+- `"copy"`: copy real files/directories from the hub, and manage `.opencode/.gitignore` so only runtime files are ignored while copied extensions remain committable.
 
 The CLI flag `--copy` (on `init`/`add`) is just a setter for `"mode": "copy"`; once set, subsequent commands honor it automatically.
 
@@ -136,7 +136,7 @@ openext add agents/my-new-agent ~/my-project
 1. The hub (`~/openext`) holds all extensions as real files.
 2. Each consumer project has a `.opencode/openext.json` manifest declaring what it needs.
 3. `openext init` creates absolute symlinks from `.opencode/` back to the hub (or real copies in [copy mode](#copy-mode)).
-4. `init` also removes any hub-managed symlinks not in the manifest and adds `.opencode/` to `.gitignore`.
+4. `init` also removes any hub-managed symlinks not in the manifest and updates a managed block inside `.opencode/.gitignore` from the manifest.
 5. Projects can mix hub-managed symlinks with local-only files -- only hub-managed symlinks are touched.
 
 ### Overriding a Hub Extension Locally
@@ -176,7 +176,7 @@ openext init . --copy
 - **`remove`**: deletes the local copy (a real file/dir).
 - **`status`**: expects a real file at each path; reports `CONFLICT` if a symlink is found instead.
 - **`clean`**: no-op for copies (it only prunes broken symlinks).
-- **`.gitignore`**: copy mode removes the `.opencode/` entry so copies get committed. Switching back to symlink mode re-adds it.
+- **`.gitignore`**: `openext init` removes any legacy root `.gitignore` entry for `.opencode/` and manages a block in `.opencode/.gitignore`. In symlink mode, linked artifacts are ignored individually. In copy mode, only runtime files (for example `node_modules` and lockfiles) are ignored.
 
 ### Switching back to symlink mode
 

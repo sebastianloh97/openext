@@ -20,6 +20,10 @@ import { join, resolve, basename, dirname, extname, relative } from "node:path";
 const HUB_DIR = resolve(import.meta.dir);
 const MANIFEST_NAME = "openext.json";
 const OPENCODE_DIR = ".opencode";
+const OPENCODE_GITIGNORE_NAME = ".gitignore";
+const ROOT_GITIGNORE_NAME = ".gitignore";
+const MANAGED_GITIGNORE_BEGIN = "# BEGIN OPENEXT MANAGED";
+const MANAGED_GITIGNORE_END = "# END OPENEXT MANAGED";
 
 const EXTENSION_TYPES = [
   "agents",
@@ -97,6 +101,14 @@ function writeManifest(project: string, manifest: Manifest) {
   const od = opencodeDir(project);
   if (!existsSync(od)) mkdirSync(od, { recursive: true });
   writeFileSync(mp, JSON.stringify(manifest, null, 2) + "\n", "utf-8");
+}
+
+function opencodeGitignorePath(project: string): string {
+  return join(opencodeDir(project), OPENCODE_GITIGNORE_NAME);
+}
+
+function rootGitignorePath(project: string): string {
+  return join(project, ROOT_GITIGNORE_NAME);
 }
 
 function isHubManagedSymlink(linkPath: string): boolean {
@@ -307,39 +319,100 @@ function materializeExtension(
 }
 
 /**
- * Reconcile .gitignore with the project mode:
- *  - symlink mode: ignore .opencode/ (symlinks are machine-specific).
- *  - copy mode: un-ignore .opencode/ so the copies get committed and the
- *    project is self-contained.
+ * Reconcile ignore rules with the project mode:
+ *  - always remove any legacy root `.gitignore` entry for `.opencode/`
+ *  - always manage `.opencode/.gitignore`
+ *  - symlink mode: ignore only hub-managed linked artifacts
+ *  - copy mode: ignore only runtime files so copied extensions stay committable
  */
-function ensureGitignore(project: string, dryRun: boolean, mode: Mode) {
-  const gitignorePath = join(project, ".gitignore");
-  let content = "";
-  if (existsSync(gitignorePath)) {
-    content = readFileSync(gitignorePath, "utf-8");
-  }
+function removeRootOpencodeIgnore(project: string, dryRun: boolean) {
+  const gitignorePath = rootGitignorePath(project);
+  if (!existsSync(gitignorePath)) return;
+
+  const content = readFileSync(gitignorePath, "utf-8");
   const lines = content.split("\n");
   const hasIgnore = lines.some(
     (l) => l.trim() === ".opencode/" || l.trim() === OPENCODE_DIR
   );
+  if (!hasIgnore) return;
 
-  if (mode === "symlink") {
-    if (hasIgnore) return;
-    const addition =
-      (content && !content.endsWith("\n") ? "\n" : "") + ".opencode/\n";
-    if (!dryRun) writeFileSync(gitignorePath, content + addition, "utf-8");
-    log(`  .gitignore: added .opencode/`);
-  } else {
-    // copy mode: remove the blanket ignore so copies get committed
-    if (!hasIgnore) return;
-    const newLines = lines.filter(
-      (l) => l.trim() !== ".opencode/" && l.trim() !== OPENCODE_DIR
-    );
-    let newContent = newLines.join("\n");
-    if (newContent && !newContent.endsWith("\n")) newContent += "\n";
-    if (!dryRun) writeFileSync(gitignorePath, newContent, "utf-8");
-    log(`  .gitignore: removed .opencode/ (copy mode commits extensions)`);
+  const newLines = lines.filter(
+    (l) => l.trim() !== ".opencode/" && l.trim() !== OPENCODE_DIR
+  );
+  let newContent = newLines.join("\n");
+  if (newContent && !newContent.endsWith("\n")) newContent += "\n";
+  if (!dryRun) writeFileSync(gitignorePath, newContent, "utf-8");
+  log(`  .gitignore: removed .opencode/ (managed in .opencode/.gitignore)`);
+}
+
+function listManagedGitignoreEntries(project: string, manifest: Manifest, mode: Mode): string[] {
+  const entries = ["node_modules", "package.json", "package-lock.json", "bun.lock"];
+
+  if (mode === "copy") {
+    return entries;
   }
+
+  const linkedEntries: string[] = [];
+  for (const [type, names] of Object.entries(manifest)) {
+    if (!EXTENSION_TYPES.includes(type as ExtensionType)) continue;
+    for (const name of names) {
+      const resolved = resolveHubEntry(type as ExtensionType, name);
+      if (!resolved) continue;
+      const linkPath = computeLinkPath(project, type as ExtensionType, name, resolved.hubPath);
+      linkedEntries.push(relative(opencodeDir(project), linkPath));
+    }
+  }
+
+  linkedEntries.sort();
+  return entries.concat(linkedEntries);
+}
+
+function buildManagedGitignoreBlock(entries: string[], mode: Mode): string {
+  const lines = [MANAGED_GITIGNORE_BEGIN, "# OpenCode auto-generated"];
+  lines.push(...entries.slice(0, 4), "");
+  if (mode === "symlink") {
+    lines.push("# openext-linked (recreate with: openext init .)");
+    lines.push(...entries.slice(4));
+  } else {
+    lines.push("# copy mode: linked extensions are committed; only runtime files are ignored");
+  }
+  lines.push(MANAGED_GITIGNORE_END, "");
+  return lines.join("\n");
+}
+
+function ensureGitignore(project: string, dryRun: boolean, manifest: Manifest, mode: Mode) {
+  removeRootOpencodeIgnore(project, dryRun);
+
+  const gitignorePath = opencodeGitignorePath(project);
+  const block = buildManagedGitignoreBlock(listManagedGitignoreEntries(project, manifest, mode), mode);
+
+  let existing = "";
+  if (existsSync(gitignorePath)) {
+    existing = readFileSync(gitignorePath, "utf-8");
+  }
+
+  const beginIndex = existing.indexOf(MANAGED_GITIGNORE_BEGIN);
+  const endIndex = existing.indexOf(MANAGED_GITIGNORE_END);
+
+  let nextContent: string;
+  if (beginIndex !== -1 && endIndex !== -1 && endIndex >= beginIndex) {
+    const before = existing.slice(0, beginIndex).trimEnd();
+    const after = existing.slice(endIndex + MANAGED_GITIGNORE_END.length).replace(/^\s+/, "");
+    nextContent = [before, block.trimEnd(), after].filter((part) => part.length > 0).join("\n\n");
+  } else if (existing.trim().length === 0) {
+    nextContent = block.trimEnd();
+  } else {
+    nextContent = `${existing.trimEnd()}\n\n${block.trimEnd()}`;
+  }
+
+  if (!nextContent.endsWith("\n")) nextContent += "\n";
+
+  if (existing === nextContent) return;
+  if (!dryRun) {
+    if (!existsSync(opencodeDir(project))) mkdirSync(opencodeDir(project), { recursive: true });
+    writeFileSync(gitignorePath, nextContent, "utf-8");
+  }
+  log(`  .opencode/.gitignore: updated managed entries (${mode})`);
 }
 
 /**
@@ -457,8 +530,8 @@ function cmdInit(project: string, dryRun: boolean, force: boolean, copy: boolean
     }
   }
 
-  // Step 4: .gitignore
-  ensureGitignore(project, dryRun, mode);
+  // Step 4: ignore rules
+  ensureGitignore(project, dryRun, manifest, mode);
 
   // Step 5: Summary
   const summaryParts: string[] = [];
@@ -522,6 +595,7 @@ function cmdAdd(
   if (copy && priorMode !== "copy") {
     warn(`mode changed to copy; run \`openext init .\` to convert existing extensions`);
   }
+  ensureGitignore(project, dryRun, manifest, mode);
   log(`added ${type}/${name} to manifest${mode === "copy" ? " [copy]" : ""}${dryRun ? " (dry-run)" : ""}`);
   return 0;
 }
@@ -586,6 +660,7 @@ function cmdRemove(
     log(`  already absent: ${type}/${name}`);
   }
 
+  ensureGitignore(project, dryRun, manifest, mode);
   log(`removed ${type}/${name} from manifest${dryRun ? " (dry-run)" : ""}`);
   return 0;
 }
@@ -943,8 +1018,8 @@ Options:
   --dry-run   Preview changes without writing
   --force     Overwrite existing files (init only)
   --copy      Materialize as real copies instead of symlinks (init/add).
-              Persists "mode": "copy" in the manifest and un-ignores .opencode/
-              so the copies are committed and the project is self-contained.
+              Persists "mode": "copy" in the manifest and manages
+              .opencode/.gitignore so copied extensions remain committable.
   --type <t>  Filter by extension type (list only)`);
     process.exit(0);
   }
