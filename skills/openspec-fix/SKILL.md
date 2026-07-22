@@ -201,15 +201,29 @@ Fix issues with an in-progress OpenSpec change implementation through iterative 
    - Summarize what was changed
    - Suggest next steps (e.g., manual testing, continue to next task)
 
-8. **Update tasks.md if needed**
+8. **Update artifacts if needed**
 
-   If the fix completes an unimplemented task:
+   **tasks.md** — If the fix completes an unimplemented task:
    - Mark the task as complete: `- [ ]` → `- [x]`
    - Add a note explaining the fix if the task had blockers
 
    Example:
    ```markdown
    - [x] 1.2 Add macOS notification handling (Fixed: 64-bit handleId to 32-bit ID mapping issue)
+   ```
+
+   **issue.md** — When an `openspec/changes/<name>/issue.md` exists and lists the issues being fixed:
+   - Mark each resolved issue's checkbox: `- [ ]` → `- [x]`
+   - Append a concise `**Resolution:**` line immediately after the issue title line, summarizing the fix in one sentence
+   - Do NOT delete or rewrite the original issue description, root cause, reproduction steps, or analysis — preserve everything
+   - Do NOT reorder issues or alter unaffected issues in any way
+
+   Example:
+   ```markdown
+   - [x] ISSUE-1: Provider mapping fails for orphaned activity calls
+     - **Resolution:** Removed the `if paired_call_ids:` guard; when the set is empty the filter correctly excludes all calls.
+     - Severity: medium
+     - **What happened:** ...
    ```
 
 9. **Provide final summary**

@@ -69,7 +69,8 @@ This skill replaces the human manual testing phase in the OpenSpec workflow. It 
    - Identify entry points: UI routes, CLI commands, API endpoints, jobs, hooks, plugins, database writes, event handlers, integrations, etc.
    - Identify state stores and side effects: files, databases, caches, queues, services, browser state, network calls, notifications, external systems, logs
    - Identify existing test helpers, fixtures, scripts, dev servers, seed data, and setup commands
-   - Locate existing automated tests relevant to the change
+    - Locate existing automated tests relevant to the change
+    - Check `openspec/changes/<name>/test/` for E2E test scripts from prior test runs that may need to be audited, re-run, or extended
 
    Build a concrete testable model of:
    - What must be started
@@ -125,6 +126,10 @@ This skill replaces the human manual testing phase in the OpenSpec workflow. It 
    - **Cleanup:** what will be restored or removed after testing
 
    Keep the plan practical. Prioritize tests that validate real behavior over implementation details.
+
+    **Test script location.** If you write test scripts during this step, place them in ``openspec/changes/<name>/test/``. Use the project's test runner (e.g., ``uv run python``) so scripts are self-contained and re-runnable. Create this directory if it does not exist.
+
+    **Before writing new scripts**, audit ``openspec/changes/<name>/test/``. It may already contain test scripts from prior test runs. Read them, determine what they cover, then extend or replace them as needed to ensure comprehensive coverage of the current implementation.
 
 7. **Run prerequisite validation**
 
@@ -273,6 +278,7 @@ This skill replaces the human manual testing phase in the OpenSpec workflow. It 
 - Avoid destructive tests unless the environment is disposable or the user explicitly approves.
 - Do not expose secrets in logs or reports.
 - Clean up only test artifacts created during this skill.
+- The tester (you, openspec-test) owns test scripts in `openspec/changes/<name>/test/`. If a test script fails because the implementation's behavior changed (e.g., after the fixer made adjustments), the tester should fix the test script to match. The fixer (openspec-fix) owns the source code; the tester owns the test scripts.
 - If the implementation appears correct but the proposal is outdated, recommend openspec-align rather than changing artifacts.
 - If a bug is found, recommend openspec-fix with the concrete failure description.
 - Use contextFiles from CLI output, don't assume specific file names.

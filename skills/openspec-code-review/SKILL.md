@@ -191,4 +191,5 @@ If the change is non-code work, such as prose, story chapters, planning document
 - Keep findings actionable and grounded in evidence.
 - Do not perform broad unrelated review.
 - Do not fix implementation issues in this skill.
+- Do not review or file issues against test scripts in `openspec/changes/<name>/test/` — those are owned by `openspec-test` and outside the scope of code review. Skip them entirely during review and static checks.
 - Do not archive, align, or commit.
