@@ -19,6 +19,8 @@ This skill is an auditor workflow, not a fixer workflow. It only updates `opensp
 
 Optionally specify a change name. If omitted, infer it from conversation context or select from active OpenSpec changes.
 
+Optionally request a **full re-audit** to also re-check previously resolved (`[x]`) issues. By default this skill skips resolved issues — re-verifying that a fix actually holds is the job of `openspec-test` and `openspec-code-review`, not this audit.
+
 ## Steps
 
 1. **Select the change**
@@ -45,7 +47,11 @@ Optionally specify a change name. If omitted, infer it from conversation context
 
 4. **Audit each issue against four filters**
 
-   For every issue (both unresolved `[ ]` and resolved `[x]`), re-evaluate it holistically by applying these four filters:
+   By default, audit only **unresolved issues (`[ ]`)** — these are the newly raised findings from `openspec-test` or `openspec-code-review` that must be triaged for scope, feasibility, and validity. Skip issues already marked `[x]`; re-verifying a completed fix belongs to `openspec-test` and `openspec-code-review`, not this audit.
+
+   Only when the user explicitly requests a **full re-audit**, also re-evaluate resolved issues (`[x]`).
+
+   For each issue in scope, re-evaluate it holistically by applying these four filters:
 
    1. **Runtime Feasibility & System Context:** Is this triggerable in production? Do upstream guarantees (API gateways, external queues, caller single-threading, structural guards) naturally prevent this condition from ever occurring?
 
@@ -71,7 +77,7 @@ Optionally specify a change name. If omitted, infer it from conversation context
    | Issue is a valid non-functional improvement (convention, consistency, best-practice) — a true positive, but not a bug | Keep `[ ]`. Keep severity. Append `**Enrichment <n> (audit):**` explaining why the issue is valid despite having no functional impact — grounded in convention drift, developer surprise, future maintenance risk, or coding-standard alignment. The enrichment should cite the specific convention, the files that follow it, and the files that deviate. |
    | Issue still valid — new context found | Append `**Enrichment <n>:**` with refined root cause, narrower trigger conditions, fixer guidance, or cross-module dependency notes. Checkbox and severity unchanged. |
    | Issue still valid — severity changed | Update severity to `~~<old>~~ → <new>`. Append `**Re-evaluation <n>:**` explaining why the risk profile changed. |
-   | Previously `[x]` but fix is incomplete | `[x]` → `[ ]`. Append `**Re-evaluation <n>:**` with what remains broken. |
+   | Previously `[x]` but fix is incomplete *(full re-audit only)* | `[x]` → `[ ]`. Append `**Re-evaluation <n>:**` with what remains broken. Only reachable when the user requested a full re-audit; by default resolved issues are never inspected. |
    | Issue confirmed as-is | Leave unchanged |
    | New issue discovered during audit | File as a new `ISSUE-<n>`. |
 
@@ -150,3 +156,4 @@ Optionally specify a change name. If omitted, infer it from conversation context
 - Do not fix implementation issues in this skill.
 - Do not review or file issues against test scripts in `openspec/changes/<name>/test/` — those are owned by `openspec-test`.
 - Do not archive, align, or commit.
+- By default, skip issues already marked `[x]`. This audit triages newly raised findings for scope and validity; re-verifying completed fixes belongs to `openspec-test` and `openspec-code-review`. Only inspect `[x]` issues when the user explicitly requests a full re-audit.
