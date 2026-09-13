@@ -1,29 +1,30 @@
 ---
 name: design-system
-description: Find and apply the project's own design system in design/ (Open Design layout — DESIGN.md + system/). Use when building or changing UI — HTML artifacts, frontend components, themes, or tokens — in a repo that ships a design/ folder.
+description: Find and apply the project's design package in design/ (DESIGN.md + system/ + drafts/). Use when building or changing any UI — HTML drafts, frontend components, themes, or tokens — in a repo that ships a design/ folder, whatever the frontend framework (React, Flutter, Astro, Angular, Vue, or none yet).
 license: MIT
 compatibility: Reading a package needs no tooling; previewing HTML artifacts needs a static file server.
 metadata:
   author: sebastian
-  version: "1.0"
+  version: "1.2"
 ---
 
 # Consume the project's design system
 
-`design/` at the repository root is the project's **design package** — the source of truth for one product surface. This skill ships no visual rules of its own; it tells you how to find the package, read it, and enforce it. Trust the package in front of you over this skill or generic defaults.
+`design/` at the repository root is the project's **design package** — the source of truth for one product surface, expressed in framework-neutral HTML+CSS+tokens. This skill ships no visual rules of its own; it tells you how to find the package, read it, and enforce it. Trust the package in front of you over this skill or generic defaults.
 
 ## Authority
 
 - **Behavior and features:** the implementation (source and API) is the truth; the UI reflects it.
 - **Design:** the package is the truth for visual language, components, and tokens.
 - **`ref/`:** approved sources, scope boundaries, and provenance — input and constraint, not design authority.
+- **`drafts/`:** explorations under review. A draft shows intent for screens not yet canonical; it never overrides `system/`. Approved drafts are promoted to `system/artifacts/`.
 - **Conflicts:** where the package and a reference differ, the package wins; a reference shows intent where the package is silent.
 
 ## 1. Locate the package
 
 1. Check `design/` at the repo root.
 2. If it is missing, search for an entrypoint before giving up: `**/DESIGN.md` and `**/brand.json` (usually still under `design/`). The project's `AGENTS.md` or `README.md` may name the folder explicitly — follow that.
-3. If no package exists, **stop and tell the user**. Do not invent colors, fonts, or components; either they point you at the package or they ask you to create one.
+3. If no package exists, **stop and tell the user**. Do not invent colors, fonts, or components; either they point you at the package, or they ask you to create one (the `design-init` skill does that).
 
 ## 2. Read it before producing anything
 
@@ -32,8 +33,10 @@ metadata:
 | `design/DESIGN.md` | Entrypoint: identity, tokens, typography, layout, components, interaction patterns, and the package's own rules for generated work. YAML frontmatter carries machine-readable fields (`themes`, `colors`, `surface`). |
 | `design/SKILLS.md` | The package's own agent guide. When present, it wins over this skill for package-specific steps. |
 | `design/ref/` | Project-specific references — scope/boundary docs, visual source, provenance. Read `ref/README.md` first. |
+| `design/drafts/` | Live drafts awaiting review — the folder is the state; everything there is non-canonical. `drafts/README.md` is the review queue. |
 | `design/brand.json` | Machine-readable brand: token values, typography, layout metrics, voice, asset paths. |
 | `design/system/BRAND-SYSTEM.md` | File map, theme convention, re-theming and add-component/add-artifact procedures. |
+| `design/system/BRIDGES.md` | Registry of framework bridges — how the package's tokens reach real app code. |
 | `design/system/kit.html`, `design/system/index.html` | Live component showcase and gallery — the fastest way to see canonical markup. |
 
 Read all of `DESIGN.md` plus whichever entries your task touches. Any scope, boundary, or deferred-features document bounds what you may build.
@@ -48,26 +51,29 @@ Read all of `DESIGN.md` plus whichever entries your task touches. Any scope, bou
 6. **Typography and copy follow the package.** Use its type roles and voice; no marketing language, emojis, or invented metrics beyond what it sanctions.
 7. **Stay in scope.** Build only what the package's scope document allows; ask before touching deferred items.
 
-## 4. Workflow A — HTML artifact or prototype
+## 4. Workflow A — HTML draft or prototype
 
-1. Start from the package's canonical shell/template artifact (e.g. `system/artifacts/app-shell.html`), not a blank page.
-2. Link the shared CSS and assets with paths relative to your page; never inline or fork tokens/components.
-3. Serve the package over HTTP and inspect it — `file://` often breaks external SVG sprites and font loading:
+1. Check `design/drafts/README.md` first: if you are revising an existing draft, edit it in place and keep its index row current.
+2. New screens start as drafts in `design/drafts/` (kebab-case `.html` with a source comment); they reach `system/artifacts/` only through promotion on approval, before implementation (see the `design-draft` skill).
+3. Start from the package's canonical shell/template artifact (e.g. `system/artifacts/app-shell.html`), not a blank page.
+4. Link the shared CSS and assets with paths relative to your page; never inline or fork tokens/components.
+5. Serve the package over HTTP and inspect it — `file://` often breaks external SVG sprites and font loading:
    ```bash
    cd design && python3 -m http.server 4173
    # open the gallery (e.g. http://localhost:4173/system/index.html), then the target page
    ```
-4. Check every supported theme through the package's own toggle.
-5. Register a new page in the gallery/index the package provides.
-6. Add new components to the shared library and showcase.
+6. Check every supported theme through the package's own toggle.
+7. Add new components to the shared library and showcase in the same change.
 
-## 5. Workflow B — app integration (React/Vue/etc.)
+## 5. Workflow B — app integration (any framework)
 
-1. Look for a consume/copy script in the package (e.g. `system/scripts/*.mjs`) and prefer it over manual copying.
-2. If the package ships a framework bridge (for example a Tailwind `@theme` token file), import token CSS in the documented order, then the bridge.
-3. Port components from the showcase into the app's idiom (e.g. shadcn/Radix), keeping token names and theme wiring identical to the package.
-4. Use the framework's utilities for layout and spacing; use the package's classes/tokens for chrome so the app and the HTML artifacts match.
-5. Wire the theme toggle to the same selector/class and persistence key the package documents.
+The package is framework-neutral; every framework integration goes through a **bridge** registered in `design/system/BRIDGES.md`.
+
+1. Identify the app's frontend framework from the repo (dependency manifests, source layout). Ask only if genuinely ambiguous or there are several.
+2. Read `system/BRIDGES.md` and follow the matching bridge's consume steps exactly (import order, scripts, token mapping).
+3. If no bridge exists for the framework, author one in the same change under `system/bridges/<framework>/`, following the rules in `system/BRIDGES.md` ("Adding a bridge"), and register it there.
+4. Port components from the showcase into the app's idiom, keeping token names and theme wiring identical to the package — the same selector/class and persistence key the package documents.
+5. Use the framework's utilities for layout and spacing; use the package's classes/tokens for chrome so the app and the HTML artifacts match.
 
 ## 6. Verify before reporting done
 
@@ -75,10 +81,13 @@ Read all of `DESIGN.md` plus whichever entries your task touches. Any scope, bou
 - [ ] Every supported theme rendered and checked.
 - [ ] No token values hardcoded outside the package's token files.
 - [ ] New components live in the shared library **and** the showcase.
+- [ ] New or changed drafts registered in the `drafts/README.md` review queue.
 - [ ] Loading, empty, and error states exist on every async surface.
 - [ ] Scope/boundary document respected.
 - [ ] The project's build/lint/typecheck/tests pass (see its `AGENTS.md`); otherwise serve the artifact and inspect it.
 
 ## 7. When package and code disagree
 
-Split by domain: design conflicts resolve to the package; behavior or feature conflicts resolve to the implementation, and the UI is fixed to match. Surface the divergence either way. Update the package only when the user asks — it is a maintained artifact, not generated scratch.
+Split by domain: design conflicts resolve to the package; behavior or feature conflicts resolve to the implementation, and the UI is fixed to match. Surface the divergence either way.
+
+Visual adjustments made while implementing must not fork the design silently: either back-port the change into the package (`components.css` + `kit.html`, plus any touched artifacts) in the same change, or present it as a proposed package update and let the user decide. Re-themes and new visual language always require explicit user approval — the package is a maintained artifact, not generated scratch.

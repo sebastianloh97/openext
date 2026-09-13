@@ -1,0 +1,7 @@
+{
+  "primary": "#ffb000",
+  "type": "system",
+  "radius": 10,
+  "density": "comfortable",
+  "themes": ["dark", "light"]
+}

@@ -1,0 +1,91 @@
+/*
+ * Starter component library — tokens only, no literal values. A genuinely new
+ * component is added here AND showcased in kit.html in the same change.
+ * TODO(project): extend per product needs.
+ */
+
+/* Actions */
+.primary-btn, .ghost-btn, .danger-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--radius);
+  font: 600 13.5px/1 var(--font-sans); cursor: pointer;
+  border: 1px solid transparent;
+  transition: filter var(--speed) ease, background var(--speed) ease;
+}
+.primary-btn { background: var(--primary); color: var(--primary-ink); }
+.primary-btn:hover { filter: brightness(1.08); }
+.ghost-btn { background: transparent; color: var(--text); border-color: var(--border); }
+.ghost-btn:hover { background: var(--surface-raised); }
+.danger-btn { background: transparent; color: var(--error); border-color: var(--error); }
+.danger-btn:hover { background: var(--error-bg); }
+
+/* Structure */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+/* Status */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 999px;
+  font: 600 12px/1.5 var(--font-sans);
+}
+.badge.ok { color: var(--success); background: var(--success-bg); }
+.badge.err { color: var(--error); background: var(--error-bg); }
+.badge.disabled { color: var(--disabled); background: var(--disabled-bg); }
+
+.status-banner {
+  padding: 10px 14px; border-radius: var(--radius);
+  font: 500 13.5px/1.4 var(--font-sans);
+}
+.status-banner.ok { color: var(--success); background: var(--success-bg); }
+.status-banner.err { color: var(--error); background: var(--error-bg); }
+
+/* Forms */
+label {
+  display: block;
+  font: 500 13.5px/1.4 var(--font-sans);
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+input, select, textarea {
+  width: 100%; padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+  font: 400 13.5px/1.4 var(--font-sans);
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+/* Data */
+.data-table {
+  width: 100%; border-collapse: collapse;
+  font: 400 13.5px/1.5 var(--font-sans);
+}
+.data-table th {
+  text-align: left; color: var(--muted); font-weight: 600;
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+}
+.data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-soft); }
+
+/* Feedback */
+.empty-state {
+  padding: 32px; text-align: center; color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+.toast {
+  position: fixed; right: 20px; bottom: 20px;
+  padding: 12px 16px; border-radius: var(--radius);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-popover);
+  font: 500 13.5px/1.4 var(--font-sans);
+}

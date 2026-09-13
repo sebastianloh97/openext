@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Component Kit</title>
+  <link rel="stylesheet" href="variables.css" />
+  <link rel="stylesheet" href="base.css" />
+  <link rel="stylesheet" href="components.css" />
+  <script src="assets/theme.js" defer></script>
+</head>
+<body>
+  <main class="shell-main">
+    <header style="display:flex; align-items:center; justify-content:space-between;">
+      <h1>Component Kit</h1>
+      <button class="ghost-btn" data-theme-toggle aria-label="Toggle theme">Theme</button>
+    </header>
+
+    <!-- TODO(project): one live example per component; add new components here
+         in the same change they enter components.css. Use real product copy. -->
+
+    <section>
+      <h2>Actions</h2>
+      <p>
+        <button class="primary-btn">Save changes</button>
+        <button class="ghost-btn">Cancel</button>
+        <button class="danger-btn">Delete</button>
+      </p>
+    </section>
+
+    <section>
+      <h2>Status</h2>
+      <p>
+        <span class="badge ok">Connected</span>
+        <span class="badge err">Unreachable</span>
+        <span class="badge disabled">Inactive</span>
+      </p>
+      <p class="status-banner ok">Reload completed — config version 12 active.</p>
+      <p class="status-banner err">Server unreachable — retrying in 30s.</p>
+    </section>
+
+    <section>
+      <h2>Forms</h2>
+      <div class="card" style="max-width:420px;">
+        <label for="kit-name">Name</label>
+        <input id="kit-name" placeholder="Real field from the product" />
+      </div>
+    </section>
+
+    <section>
+      <h2>Data</h2>
+      <table class="data-table">
+        <thead>
+          <tr><th>Item</th><th>Status</th><th>Updated</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">item-01</td><td><span class="badge ok">ok</span></td><td>2m ago</td></tr>
+          <tr><td class="mono">item-02</td><td><span class="badge err">err</span></td><td>1h ago</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Feedback</h2>
+      <div class="empty-state">Nothing here yet — the empty state explains why and what to do next.</div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "TODO(project): product name",
+  "slug": "todo-project",
+  "surface": "web",
+  "themes": ["dark", "light"],
+  "colors": {
+    "background": "#141414",
+    "foreground": "#f2f2f2",
+    "accent": "#ffb000",
+    "surface": "#1c1c1c",
+    "muted": "#808080",
+    "border": "#333333"
+  },
+  "typography": {
+    "sans": "system stack (see --font-sans)",
+    "mono": "ui-monospace stack (see --font-mono)"
+  },
+  "layout": {
+    "radius": [8, 10, 14],
+    "spacingBaseline": "4px"
+  },
+  "assets": {
+    "kit": "system/kit.html",
+    "gallery": "system/index.html",
+    "shell": "system/artifacts/app-shell.html"
+  }
+}

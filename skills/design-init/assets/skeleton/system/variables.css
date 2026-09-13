@@ -1,0 +1,72 @@
+/*
+ * Token source of truth. One block per declared theme; the first theme lives in
+ * :root, the light override in body.light-theme.
+ *
+ * Core token names below are the cross-project contract — bridges, skills, and
+ * the JSON mirrors rely on them. Extend with project tokens at the bottom;
+ * never rename a core token.
+ *
+ * TODO(project): replace values with the confirmed seed (ref-derived or
+ * interview). Single-theme product? Delete the unused block and the toggle.
+ */
+:root {
+  /* surfaces */
+  --bg: #141414;             /* page canvas */
+  --surface: #1c1c1c;        /* cards, sidebars */
+  --surface-raised: #242424; /* popovers, hover */
+  --border: #333333;         /* strong rules, controls */
+  --border-soft: #2a2a2a;    /* dividers */
+
+  /* text */
+  --text: #f2f2f2;           /* primary text */
+  --text2: #b0b0b0;          /* secondary text */
+  --muted: #808080;          /* metadata */
+
+  /* brand */
+  --primary: #ffb000;        /* TODO(project): brand color */
+  --primary-ink: #1f1a08;    /* text on primary */
+  --primary-dim: #4a3a10;    /* active/tint surfaces */
+
+  /* status */
+  --error: #ff3b30;
+  --error-bg: #3a1512;
+  --success: #43b75d;
+  --success-bg: #132a17;
+  --disabled: #8a8a8a;
+  --disabled-bg: #2a2a2a;
+
+  /* typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; /* TODO(project): vendored font stack */
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* shape & motion */
+  --radius-sm: 8px;   /* fields, chips */
+  --radius: 10px;     /* buttons, rows, popovers */
+  --radius-lg: 14px;  /* cards, tables, empty states */
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --speed: 0.16s;     /* hover, collapse, popover transitions */
+
+  /* project tokens — append below this line */
+}
+
+body.light-theme {
+  /* TODO(project): light values for every token above */
+  --bg: #f6f6f4;
+  --surface: #ffffff;
+  --surface-raised: #efede6;
+  --border: #dcd8ca;
+  --border-soft: #e7e3d7;
+  --text: #232019;
+  --text2: #514c40;
+  --muted: #8a8577;
+  --primary-dim: #fff1cc;
+  --error: #d92d20;
+  --error-bg: #fee4e2;
+  --success: #178a3d;
+  --success-bg: #e3f6e8;
+  --disabled: #b0aca2;
+  --disabled-bg: #eceae4;
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.2);
+}
