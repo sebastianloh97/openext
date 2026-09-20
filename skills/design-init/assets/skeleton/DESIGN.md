@@ -17,16 +17,16 @@ colors:
 
 > TODO(project): one line — what this surface is and who it serves.
 
-This package is the single source of truth for the product's visual language.
-The implementation (source and API) is the truth for features and behavior; the
-UI reflects it. Material under `ref/` is input and constraint, not design
-authority.
+This workspace is the single source of truth for the product's design:
+`system/` is the visual language and `app/` is the live HTML clone of the
+product — the screens to match. The implementation (source and API) is the
+truth for features and behavior; the UI reflects it, and shipped reality is
+back-ported into the clone.
 
 ## 1. Identity
 
 TODO(project): 2-4 sentences — operator tool / consumer app / marketing? Primary
-audience? Tone of UI copy? Scope guardrails and deferred features (or point at
-the scope doc in `ref/`).
+audience? Tone of UI copy? Scope guardrails and deferred features.
 
 ## 2. Color palette
 
@@ -49,13 +49,13 @@ vendored font? Document family, weights, and where it is wired.
 
 Radius 8/10/14px (`--radius-sm`/`--radius`/`--radius-lg`); 1px borders;
 4px spacing baseline; `--speed` transitions. Shell: 220px sidebar + scrollable
-main (see `system/artifacts/app-shell.html`). TODO(project): the product's
-layout patterns (list-detail, editor grid, docks...).
+main (see `system/app-shell.html`). TODO(project): the product's layout
+patterns (list-detail, editor grid, docks...).
 
 ## 5. Components
 
-`system/components.css` is the library; `system/kit.html` is the showcase — copy
-markup from there, never restyle per page. Starter set: `.primary-btn`
+`system/components.css` is the library; `system/kit.html` is the showcase —
+copy markup from there, never restyle per page. Starter set: `.primary-btn`
 `.ghost-btn` `.danger-btn`, `.card`, `.badge.ok|.err|.disabled`,
 `.status-banner.ok|.err`, form fields, `.data-table`, `.empty-state`, `.toast`.
 TODO(project): list primary components as the library grows.
@@ -75,24 +75,25 @@ TODO(project): adjectives to use, words to use, words to avoid.
 2. Link the shared CSS — never inline tokens, never fork component CSS.
 3. Respect the `themes:` frontmatter; render and check every theme.
 4. Identifiers, config values, and log text are monospace.
-5. Every asynchronous surface needs loading, empty, and error states.
+5. Every asynchronous surface needs loading, empty, and error states — as
+   `?state=` URL params on the clone page.
 6. New component? `components.css` + `kit.html` in the same change.
 7. Stay in scope; ask before touching deferred items.
+8. The clone is the design: pin decisions as git commits, and back-port
+   shipped reality into the clone page in the same change that ships it.
 
 ## 9. File map
 
 | Path | What it is |
 |---|---|
 | `DESIGN.md` | This file |
-| `SKILLS.md` | How an AI agent applies the package |
+| `SKILLS.md` | How an AI agent applies the workspace |
 | `brand.json` | Machine-readable brand |
-| `ref/` | References and scope — see `ref/README.md` |
-| `drafts/` | Screen drafts under review — see `drafts/README.md` |
+| `app/` | The product clone — one HTML page per route; `app/index.html` is the route directory |
 | `system/variables.css` | Token source of truth |
 | `system/base.css` | Reset, fonts, shell, utilities |
 | `system/components.css` | Component library |
 | `system/kit.html` | Component showcase with theme toggle |
-| `system/index.html` | Gallery |
+| `system/app-shell.html` | Shared page shell new clone pages start from |
 | `system/BRIDGES.md` | Framework bridge registry |
-| `system/artifacts/` | Canonical page templates |
 | `system/assets/theme.js` | Shared theme toggle |

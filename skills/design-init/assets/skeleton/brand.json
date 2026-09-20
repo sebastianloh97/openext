@@ -21,7 +21,7 @@
   },
   "assets": {
     "kit": "system/kit.html",
-    "gallery": "system/index.html",
-    "shell": "system/artifacts/app-shell.html"
+    "clone": "app/index.html",
+    "shell": "system/app-shell.html"
   }
 }

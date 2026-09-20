@@ -1,61 +1,91 @@
 ---
 name: design-draft
-description: Draft frontend screens as HTML pages in design/drafts/ by understanding the codebase and applying the project's design package. Use when asked to mock up, draft, wireframe, or prototype screens and pages, to revise an existing draft, or to promote an approved draft into the canonical design system.
+description: Iterate the product clone at design/app/ to change a screen's DESIGN — what it shows, how it behaves, new screens, new states — before any app code is written. Edits land directly in the clone page (?state= URL params for states) and the decided design is pinned with a git commit. The clone is the design.
 license: MIT
-compatibility: Needs the design package and a static file server; browser tooling optional for screenshots.
+compatibility: Needs a static file server to preview; browser tooling for verification.
 metadata:
   author: sebastian
-  version: "1.2"
+  version: "2.0"
 ---
 
-# Draft screens in design/drafts/
+# Iterate the product clone
 
-Drafts are HTML explorations that show how a screen should look and behave before it is implemented. They live in `design/drafts/` — disposable by design, never canonical until promoted. The folder is the state: everything in `drafts/` is a live draft awaiting review; everything in `system/artifacts/` is canonical. The `design-system` skill's locate/read rules apply: if no package exists, stop and point the user at `design-init`.
+`design/app/` is a live, service-free HTML clone of the product — one page per
+route, linked to the shared design system in `design/system/`. This skill adds
+or changes screens **in the clone**, the user reviews it in a browser, and the
+decided design is pinned with a git commit. The working diff is the in-review
+state and git history is the pin record — a separate drafts folder would only
+duplicate them. Implementation (see `design-system`) works from the pinned
+clone.
 
 ## 1. Preconditions
 
-Read, in order: `design/DESIGN.md`, `design/SKILLS.md` (the package guide wins on package-specific steps), `design/system/kit.html` (the component inventory), any scope doc under `design/ref/`, and `design/drafts/README.md` (existing drafts, statuses, and the draft conventions — the package's own docs win over this skill).
+Read, in order: `design/DESIGN.md`, `design/SKILLS.md` (the package guide wins
+on package-specific steps), `design/system/kit.html` (the component inventory),
+and `design/app/index.html` (the route directory). Then ground the work in the
+real product: read the actual screen/route code for entities, field labels,
+statuses, and copy; mark any fabricated value as sample. Stop and ask only
+when scope or behavior is genuinely ambiguous.
 
-## 2. Understand the product from the codebase
+## 2. Announce the plan
 
-Drafts are grounded in the real product, not filler. Read `README.md`/`AGENTS.md`, find the frontend's routes or screens, and find the API schemas/models/DTOs behind the entities each screen shows. Use real entity names, field labels, statuses, and copy the backend actually supports. No lorem ipsum, no invented metrics, no features the codebase does not have. Where data cannot be found, mark sample values clearly as sample.
+State in one message which page(s) you will touch and the intent of each
+change, then proceed — the user redirects mid-run if needed.
 
-## 3. Announce the plan
+## 3. Edit the clone
 
-State in one message the screens you will draft and a one-line intent for each, then proceed — the user redirects mid-run if needed. Stop and ask only when scope or behavior is genuinely ambiguous.
+- **Existing screen:** edit `design/app/<screen>.html` in place.
+- **New screen:** create `design/app/<route>.html` starting from
+  `system/app-shell.html`, wire navigation to and from the related pages, and
+  add the route to `app/index.html`.
+- **Alternatives (A/B):** a temporary `<screen>-alt.html` sibling or a git
+  branch; delete the loser.
+- Each page carries a source comment near the top: the request that produced
+  it and any backend contract or copy it assumes.
+- One screen per file, kebab-case — its states are `?state=` URL params on
+  that file, never separate files (the convention the reference screens set
+  with `?step=` and `?mode=`).
+- Preview states cover every state the real surface has — every asynchronous
+  surface gets loading, empty, and error built from the package's utilities.
+- Link the shared CSS — from `app/`: `../system/variables.css`,
+  `../system/base.css`, `../system/components.css`, `../system/assets/theme.js`.
+  Tokens and components come from there; layout-only inline styles and a small
+  layout-only `<style>` block are fine, visual values are not.
+- ARIA basics: real `<button>`/`<label>` elements, `aria-label` on icon-only
+  buttons, one `<main>` per page.
+- Minimal inline JS for toggles, tab/param switching, and demo interactions
+  only. The clone never calls a service — data is inline and marked sample.
+- Tokens only; reuse kit components before inventing. A genuinely new
+  component goes into `system/components.css` **and** `system/kit.html` in the
+  same change. A pattern repeated across pages graduates into the shared
+  library.
+- Token values and component CSS are package-level: a page iterates with
+  them, never around them. A new component or a re-theme is a deliberate
+  package change routed through the user.
 
-## 4. Author each draft
+## 4. Self-review (all items must pass)
 
-- `design/drafts/<kebab-case>.html`; register every draft in the `drafts/README.md` review queue.
-- Give each draft the source comment and relative CSS paths defined in `drafts/README.md`.
-- Start from `system/artifacts/app-shell.html` when it fits. Link the shared CSS; never inline tokens or fork component CSS.
-- Tokens only; reuse kit components before inventing. A genuinely new component goes into `components.css` **and** `kit.html` in the same change, even mid-draft.
-- Every asynchronous surface gets loading, empty, and error states from the package's utilities. ARIA basics: real `<button>`/`<label>` elements, `aria-label` on icon-only buttons.
-- Every declared theme must work through the package's own toggle.
-- Follow the interaction patterns `DESIGN.md` documents; use the package's shared JS where it exists, otherwise minimal inline JS for toggles only.
+Serve `design/` over HTTP (`python3 -m http.server 4173`, then
+`http://localhost:4173/app/<name>.html`) and check the touched page(s) in
+**every** declared theme through the package's own toggle.
 
-## 5. Self-review (all items must pass)
-
-Serve `design/` over HTTP (`python3 -m http.server 4173`, then `http://localhost:4173/drafts/<name>.html`) and open each draft in every declared theme; screenshot each if browser tooling is available.
-
-- [ ] Scope doc respected; no deferred features drafted.
+- [ ] Scope respected; no deferred features built.
 - [ ] No token values hardcoded outside the package's token files.
 - [ ] Every theme rendered and checked.
-- [ ] Content is real — entities, labels, and states from the codebase.
-- [ ] Registered in the `drafts/README.md` review queue.
+- [ ] Geometry verified, not eyeballed: content clears fixed chrome (rail,
+      top bar) at desktop and mobile widths; no horizontal overflow; two-column
+      layouts collapse at the package's breakpoint (inline grid styles defeat
+      media queries — use layout-only classes).
+- [ ] Every `?state=` param works; interactions wired; console clean.
+- [ ] Content is real — entities, labels, and states from the codebase;
+      sample values marked.
+- [ ] Navigation to/from the page works; `app/index.html` current.
 
-## 6. Revise
+## 5. Pin
 
-Edit drafts in place; keep the index row's summary current. Rejected or abandoned drafts are simply deleted — the folder holds only live drafts awaiting review.
-
-## 7. Promote — on approval, before implementation
-
-Promotion follows approval immediately — in the same turn, covering every draft the approval names — and always precedes implementation: the artifact is the canonical design that implementation and any proposal/spec cite, while drafts are disposable and are never cited as a design source. Promotion is a statement of design authority, not of build status.
-
-1. Copy the draft to `system/artifacts/<name>.html` and adjust relative paths (`../system/` becomes `../`; `../ref/` becomes `../../ref/`).
-2. Rewrite the header into artifact form: `artifact:` name, `source:`, and `approved:`/`promoted:` dates; remove "disposable"/"not canonical" wording.
-3. Register it in the gallery (`system/index.html`); mention it in `DESIGN.md`'s file map if it is a primary screen.
-4. Delete the draft and its index row — the folder holds only live drafts awaiting review.
-5. Report what changed in the package so the user can review the promotion.
-
-Implementation-time visual adjustments are back-ported into the artifact in the same change (the `design-system` skill's disagreement rules). A design that implementation proves fundamentally wrong returns to drafting and re-promotion — it is not patched in code alone.
+When the user approves the change, pin it as a git commit in the repo
+(`pin: <what was decided>`). The commit is the pin — the page itself is the
+canonical design from that point, with nothing copied, registered, or
+rewritten anywhere else. If implementation later forces a visual deviation,
+that is a `design-system` back-port: fix the clone page in the same change so
+the clone stays the truth.
