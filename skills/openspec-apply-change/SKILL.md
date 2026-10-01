@@ -147,6 +147,7 @@ What would you like to do?
 - Update task checkbox immediately after completing each task
 - Pause on errors, blockers, or unclear requirements - don't guess
 - Use contextFiles from CLI output, don't assume specific file names
+- Follow the repo's comment and vocabulary conventions per AGENTS.md, and before finishing, check the comments and docstrings you added or modified with the `openspec-comment-audit` skill (if installed) and fix violations; comment-only changes need no test tier.
 
 **Fluid Workflow Integration**
 

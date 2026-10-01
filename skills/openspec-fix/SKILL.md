@@ -263,6 +263,7 @@ Fix issues with an in-progress OpenSpec change implementation through iterative 
 - **Test if possible**: Run tests to ensure fix doesn't break existing functionality
 - **Document clearly**: Use file:line format, explain why changes are needed
 - **Ask when unsure**: If the issue is ambiguous or has multiple valid solutions, propose and ask user to choose
+- Follow the repo's comment and vocabulary conventions per AGENTS.md, and before finishing, check the comments and docstrings you added or modified with the `openspec-comment-audit` skill (if installed) and fix violations; comment-only changes need no test tier.
 
 **When to Use This Skill**
 

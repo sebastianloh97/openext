@@ -156,6 +156,7 @@ Review an in-progress OpenSpec change implementation, run static analysis and va
 - If task is ambiguous, pause and ask before implementing
 - If implementation reveals issues, pause and suggest artifact updates
 - Use contextFiles from CLI output, don't assume specific file names
+- Follow the repo's comment and vocabulary conventions per AGENTS.md, and before finishing, check the comments and docstrings you added or modified with the `openspec-comment-audit` skill (if installed) and fix violations; comment-only changes need no test tier.
 
 **Fluid Workflow Integration**
 
