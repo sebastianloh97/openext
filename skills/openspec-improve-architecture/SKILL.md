@@ -1,5 +1,5 @@
 ---
-name: improve-codebase-architecture
+name: openspec-improve-architecture
 description: Turn architectural friction into staged, behavior-frozen refactor proposals - scope a direction or git-history hot spots, explore for shallow modules and missing seams, present candidates, run a hands-off design-it-twice in an agent-collab room, stop at a mandatory master review gate, and write the stage-1 OpenSpec proposal. Use when asked to improve the codebase architecture, find deep-module refactor candidates, untangle hot files, or plan a staged refactor.
 ---
 
