@@ -1,0 +1,20 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "plugin": [
+        "opencode-pty"
+    ],
+    "default_agent": "sera",
+    "agent": {
+        "build": {
+            "disable": true
+        },
+        "plan": {
+            "disable": true
+        }
+    },
+    "permission": {
+        "external_directory": {
+            "/tmp/**": "allow",
+        },
+    },
+}
