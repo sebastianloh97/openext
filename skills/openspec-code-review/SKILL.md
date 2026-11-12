@@ -104,6 +104,8 @@ If the change is non-code work, such as prose, story chapters, planning document
 
    Do not treat this as the E2E test phase. If behavior must be tested end-to-end, recommend `openspec-test` instead.
 
+   When a long check (a full test suite, a slow build) is worth running, start it in a background session and keep reviewing in the meantime — never sit idle waiting for it. Continue with static work that does not depend on its result (file reads, review, `issue.md` drafting), and poll the session with a appropriate `sleep` only when nothing useful remains. Follow the project's own rules on concurrent test runs.
+
 8. **Merge findings into issue.md**
 
     Before writing, read `openspec/changes/<name>/issue.md` if it exists. If new issues are found and the file does not exist, create it.

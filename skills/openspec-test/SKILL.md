@@ -277,6 +277,7 @@ This skill replaces the human manual testing phase in the OpenSpec workflow. It 
 - Use internal/unit tests only as supporting evidence, not as a replacement for E2E behavior.
 - Avoid destructive tests unless the environment is disposable or the user explicitly approves.
 - Do not expose secrets in logs or reports.
+- Never go idle to wait for an external window (vendor quota, rate limit, scheduled job). Keep the turn active with a notify-on-exit PTY timer and a foreground `sleep` sized above the wait (explicit command timeout larger than the wait), then re-check the gate and continue. Never hand the turn back with a timer pending.
 - Clean up only test artifacts created during this skill.
 - The tester (you, openspec-test) owns test scripts in `openspec/changes/<name>/test/`. If a test script fails because the implementation's behavior changed (e.g., after the fixer made adjustments), the tester should fix the test script to match. The fixer (openspec-fix) owns the source code; the tester owns the test scripts.
 - If the implementation appears correct but the proposal is outdated, recommend openspec-align rather than changing artifacts.
