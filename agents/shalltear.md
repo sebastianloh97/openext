@@ -1,6 +1,6 @@
 ---
 description: Searches the public internet and collects verified information
-model: xiaomi/mimo-v2.5
+model: xiaomi/mimo-v2.6-flash
 permission:
   "*": "allow"
   "task":
